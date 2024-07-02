@@ -14,8 +14,7 @@ router.post("/Register", async (req, res, next) => {
       password: req.body.password,
       email: req.body.email,
     }
-    let users = [];
-    query = `SELECT 1 from users where username = '${user_details.username}'`;
+    query = `SELECT 1 FROM users WHERE user_name = '${user_details.username}'`;
     found = await DButils.execQuery(query);
 
     if (found && found.length > 0) throw { status: 409, message: "Username taken" };
@@ -34,25 +33,22 @@ router.post("/Register", async (req, res, next) => {
 
 router.post("/Login", async (req, res, next) => {
   try {
+    let username = req.body.username;
+    let password = req.body.password;
     // check that username exists
-    const users = await DButils.execQuery("SELECT username FROM users");
-    if (!users.find((x) => x.username === req.body.username))
+    query = `SELECT user_name, user_password FROM users WHERE user_name = '${username}'`;
+    const users = await DButils.execQuery(query);
+    if (!users || users.length == 0)
       throw { status: 401, message: "Username or Password incorrect" };
 
     // check that the password is correct
-    const user = (
-      await DButils.execQuery(
-        `SELECT * FROM users WHERE username = '${req.body.username}'`
-      )
-    )[0];
-
-    if (!bcrypt.compareSync(req.body.password, user.password)) {
+    user = users[0];
+    if (!bcrypt.compareSync(password, user.user_password)) {
       throw { status: 401, message: "Username or Password incorrect" };
     }
 
     // Set cookie
-    req.session.user_id = user.user_id;
-
+    req.session.user_name = user.user_name;
 
     // return cookie
     res.status(200).send({ message: "login succeeded", success: true });
@@ -62,6 +58,8 @@ router.post("/Login", async (req, res, next) => {
 });
 
 router.post("/Logout", function (req, res) {
+  console.log(req.user_name);
+  console.log(req.session);
   req.session.reset(); // reset the session info --> send cookie when  req.session == undefined!!
   res.send({ success: true, message: "logout succeeded" });
 });

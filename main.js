@@ -56,22 +56,23 @@ const recipes = require("./routes/recipes");
 const auth = require("./routes/auth");
 
 
-//#region cookie middleware
-app.use(function (req, res, next) {
-  if (req.session && req.session.user_id) {
-    DButils.execQuery("SELECT user_id FROM users")
-      .then((users) => {
-        if (users.find((x) => x.user_id === req.session.user_id)) {
-          req.user_id = req.session.user_id;
-        }
-        next();
-      })
-      .catch((error) => next());
-  } else {
-    next();
-  }
-});
-//#endregion
+// //#region cookie middleware
+// app.use(function (req, res, next) {
+//   console.log("ron")
+//   if (req.session && req.session.user_name) {
+//     DButils.execQuery("SELECT user_name FROM users")
+//       .then((users) => {
+//         if (users.find((x) => x.user_name === req.session.user_name)) {
+//           req.user_name = req.session.user_name;
+//         }
+//         next();
+//       })
+//       .catch((error) => next());
+//   } else {
+//     next();
+//   }
+// });
+// //#endregion
 
 // ----> For cheking that our server is alive
 app.get("/alive", (req, res) => res.send("I'm alive"));
@@ -83,8 +84,12 @@ app.use("/auth", auth);
 
 // Default router
 app.use(function (err, req, res, next) {
-  console.error(err);
-  res.status(err.status || 500).send({ message: err.message, success: false });
+  console.log(err);
+  let status = 500;
+  if (err && err.response && err.response.status) {
+    status = err.response.status;
+  }
+  res.status(status).send({ message: err.message, success: false });
 });
 
 
