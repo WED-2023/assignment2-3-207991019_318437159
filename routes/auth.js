@@ -13,13 +13,16 @@ router.post("/Register", async (req, res, next) => {
       country: req.body.country,
       password: req.body.password,
       email: req.body.email,
-    }
+    };
     query = `SELECT 1 FROM users WHERE user_name = '${user_details.username}'`;
     found = await DButils.execQuery(query);
 
-    if (found && found.length > 0) throw { status: 409, message: "Username taken" };
+    if (found && found.length > 0)
+      throw { status: 409, message: "Username taken" };
 
-    let hash_password = bcrypt.hashSync(user_details.password, parseInt(process.env.bcrypt_saltRounds)
+    let hash_password = bcrypt.hashSync(
+      user_details.password,
+      parseInt(process.env.bcrypt_saltRounds)
     );
     await DButils.execQuery(
       `INSERT INTO users (user_name, first_name, last_name, country, email, user_password) VALUES ('${user_details.username}', '${user_details.firstname}', '${user_details.lastname}',
@@ -48,7 +51,7 @@ router.post("/Login", async (req, res, next) => {
     }
 
     // Set cookie
-    req.session.user_name = user.user_name;
+    req.session.username = user.user_name;
 
     // return cookie
     res.status(200).send({ message: "login succeeded", success: true });
@@ -58,8 +61,6 @@ router.post("/Login", async (req, res, next) => {
 });
 
 router.post("/Logout", function (req, res) {
-  console.log(req.user_name);
-  console.log(req.session);
   req.session.reset(); // reset the session info --> send cookie when  req.session == undefined!!
   res.send({ success: true, message: "logout succeeded" });
 });

@@ -1,21 +1,38 @@
 var express = require("express");
 var router = express.Router();
-const recipes_utils = require("./utils/recipes_utils");
+const recipesUtils = require("./utils/recipesUtils");
 
-router.get("/", (req, res) => res.send("im here"));
+function getUserName(req) {
+  let username = null;
+  if (req.session && req.session.username) {
+    username = req.session.username;
+  }
+  return username;
+}
 
 /**
  * This path is for searching a recipe
  */
-router.get("/search", async (req, res, next) => {
+router.post("/search", async (req, res, next) => {
   try {
-    const recipeName = req.query.recipeName;
-    const cuisine = req.query.cuisine;
-    const diet = req.query.diet;
-    const intolerance = req.query.intolerance;
-    const number = req.query.number || 5;
-    const results = await recipes_utils.searchRecipe(recipeName, cuisine, diet, intolerance, number);
-    res.send(results);
+    const queryName = req.body.queryName;
+    const cuisines = req.body.cuisines;
+    const diets = req.body.diets;
+    const intolerances = req.body.intolerances;
+    const amount = req.body.amount || 5;
+    const username = getUserName(req);
+
+    console.log(queryName, cuisines, diets, intolerances, amount, username);
+    const result = await recipesUtils.searchRecipes(
+      queryName,
+      cuisines,
+      diets,
+      intolerances,
+      amount,
+      username
+    );
+
+    res.send(result);
   } catch (error) {
     next(error);
   }
@@ -26,19 +43,19 @@ router.get("/search", async (req, res, next) => {
  */
 router.get("/:recipeId", async (req, res, next) => {
   try {
-    const recipe = await recipes_utils.getRecipeFullDetails(req.params.recipeId);
+    const recipe = await recipesUtils.getRecipeFullDetails(req.params.recipeId);
     res.send(recipe);
   } catch (error) {
     next(error);
   }
 });
 
-
-router.get("/random", async (req, res, next) => {
-  
+router.get("/random/:amount", async (req, res, next) => {
   try {
-    const recipe = await recipes_utils.getRecipeDetails(req.params.recipeId);
-    res.send(recipe);
+    const amount = req.params.amount;
+    const username = getUserName(req);
+    const result = await recipesUtils.getRandomRecipes(amount, username);
+    res.send(result);
   } catch (error) {
     next(error);
   }
