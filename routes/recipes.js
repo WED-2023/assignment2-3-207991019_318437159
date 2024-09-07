@@ -1,6 +1,8 @@
 var express = require("express");
 var router = express.Router();
 const recipesUtils = require("./utils/recipesUtils");
+const authUtils = require("./utils/authUtils");
+const userUtils = require("./utils/userUtils");
 
 function getUserName(req) {
   let username = null;
@@ -22,7 +24,6 @@ router.post("/search", async (req, res, next) => {
     const amount = req.body.amount || 5;
     const username = getUserName(req);
 
-    console.log(queryName, cuisines, diets, intolerances, amount, username);
     const result = await recipesUtils.searchRecipes(
       queryName,
       cuisines,
@@ -43,8 +44,17 @@ router.post("/search", async (req, res, next) => {
  */
 router.get("/:recipeId", async (req, res, next) => {
   try {
-    const recipe = await recipesUtils.getRecipeFullDetails(req.params.recipeId);
-    res.send(recipe);
+    const recipeId = req.params.recipeId;
+    if (recipeId[0] !== "0") {
+      const recipe = await recipesUtils.getRecipeFullDetails(
+        req.params.recipeId
+      );
+      res.status(200).send(recipe);
+    } else {
+      const recipe = await userUtils.getRecipeFullDetails(req.params.recipeId);
+      console.log(recipe);
+      res.status(200).send(recipe);
+    }
   } catch (error) {
     next(error);
   }
@@ -55,7 +65,7 @@ router.get("/random/:amount", async (req, res, next) => {
     const amount = req.params.amount;
     const username = getUserName(req);
     const result = await recipesUtils.getRandomRecipes(amount, username);
-    res.send(result);
+    res.status(200).send(result);
   } catch (error) {
     next(error);
   }

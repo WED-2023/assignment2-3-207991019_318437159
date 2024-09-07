@@ -1,4 +1,6 @@
+const { json } = require("express");
 const DButils = require("./DButils");
+const SERVER_URL = process.env.SERVER_URL;
 
 async function markAsFavorite(username, recipe_id) {
   // add validations?
@@ -8,7 +10,9 @@ async function markAsFavorite(username, recipe_id) {
 }
 
 async function markAsViewed(username, recipe_id) {
-  // add validations?
+  await DButils.execQuery(
+    `DELETE FROM user_watched WHERE user_name='${username}' AND recipe_id=${recipe_id}`
+  );
   await DButils.execQuery(
     `insert into user_watched (user_name, recipe_id) values ('${username}',${recipe_id})`
   );
@@ -29,13 +33,13 @@ async function getViewedRecipesFromList(username, recipeIds) {
   }
   const idsForQuery = recipeIds.join(",");
   const recipes = await DButils.execQuery(
-    `SELECT recipe_id FROM user_watched WHERE id IN (${idsForQuery})`
+    `SELECT recipe_id FROM user_watched WHERE user_name='${username}' AND recipe_id IN (${idsForQuery})`
   );
   return recipes.map((row) => row.recipe_id);
 }
 
 async function getViewedRecipes(username, amount = null) {
-  let query = `SELECT recipe_id FROM user_watched WHERE user_name='${username}'`;
+  let query = `SELECT recipe_id FROM user_watched WHERE user_name = '${username}'`;
   if (amount) {
     query += `ORDER BY recipe_id DESC LIMIT ${amount}`;
   }
@@ -58,7 +62,7 @@ async function getFavoriteRecipesFromList(username, recipeIds) {
   }
   const idsForQuery = recipeIds.join(",");
   const recipes = await DButils.execQuery(
-    `SELECT recipe_id FROM user_favorite WHERE id IN (${idsForQuery})`
+    `SELECT recipe_id FROM user_favorite WHERE user_name = '${username}' AND recipe_id IN (${idsForQuery})`
   );
   return recipes.map((row) => row.recipe_id);
 }
@@ -79,17 +83,29 @@ async function saveRecipe(username, recipe) {
   if (errorMessage) {
     throw { status: 400, message: errorMessage };
   } else {
-    const ingredients = JSON.stringify(recipe.ingredients);
-    const instructions = JSON.stringify(recipe.instructions);
-    result = await DButils.execQuery(
-      `insert into recipe (title, preview, summary, cuisine, servings, ready_in_minutes, vegan, vegetarian, gluten_free , ingredients, instructions)
-        values ('${recipe.title}', '${recipe.preview}', '${recipe.summary}', '${recipe.cuisine}', ${recipe.servings},
-          ${recipe.readyInMinutes}, ${recipe.vegan}, ${recipe.vegetarian}, ${recipe.glutenFree}, '${ingredients}', '${instructions}')`
+    // Fetch the latest ID from the recipe table
+    const resultLastId = await DButils.execQuery(
+      `SELECT id FROM recipe ORDER BY CAST(id AS UNSIGNED) DESC LIMIT 1`
     );
-    const recipeId = result.insertId;
+    
+    let nextId;
+    if (resultLastId.length > 0) {
+      const lastId = resultLastId[0].id;
+      nextId = '0' + (parseInt(lastId) + 1).toString();
+    } else {
+      nextId = '01';
+    }
 
+    // Insert the new recipe with the generated ID
     await DButils.execQuery(
-      `insert into user_recipe (user_name, recipe_id) values ('${username}', ${recipeId})`
+      `INSERT INTO recipe (id, title, preview, summary, cuisine, servings, ready_in_minutes, vegan, vegetarian, gluten_free, ingredients, instructions, photo_url)
+        VALUES ('${nextId}', '${recipe.name}', '${recipe.preview}', '${recipe.summary}', '${recipe.cuisine}', ${recipe.servings},
+        ${recipe.time}, ${recipe.vegan}, ${recipe.vegetarian}, ${recipe.glutenFree}, '${recipe.ingredients}', '${recipe.instructions}', '${recipe.photoUrl}')`
+    );
+
+    // Insert into the user_recipe table
+    await DButils.execQuery(
+      `INSERT INTO user_recipe (user_name, recipe_id) VALUES ('${username}', '${nextId}')`
     );
   }
 }
@@ -106,6 +122,7 @@ function parseRecipeDetails(recipe) {
     cuisine: recipe.cuisine,
     viewed: true,
     favorite: true,
+    image: SERVER_URL + recipe.photo_url,
   };
 }
 
@@ -114,13 +131,15 @@ function parseRecipeFullDetails(recipe) {
     id: recipe.id,
     title: recipe.title,
     readyInMinutes: recipe.ready_in_minutes,
-    summary: recipe.summmary,
-    vegan: recipe.vegan,
-    vegetarian: recipe.vegetarian,
-    glutenFree: recipe.glutenFree,
+    summary: recipe.preview,
+    vegan: Boolean(recipe.vegan),
+    vegetarian: Boolean(recipe.vegetarian),
+    glutenFree: Boolean(recipe.glutenFree),
     cuisine: recipe.cuisine,
     instructions: recipe.instructions,
-    ingredients: recipe.ingredients,
+    extendedIngredients: recipe.ingredients,
+    image: SERVER_URL + recipe.photo_url,
+    servings: recipe.servings,
   };
 }
 

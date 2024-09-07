@@ -70,6 +70,7 @@ async function getRecipeFullDetails(recipeId) {
     cuisines,
     servings,
     aggregateLikes,
+    extendedIngredients,
     vegan,
     vegetarian,
     glutenFree,
@@ -85,6 +86,7 @@ async function getRecipeFullDetails(recipeId) {
       instructions.push(analyzedInstructions[0].steps[i].step);
     }
   }
+  const cuisine = cuisines ? cuisines.join(", ") : "";
   return {
     id: id,
     title: title,
@@ -95,21 +97,22 @@ async function getRecipeFullDetails(recipeId) {
     vegetarian: vegetarian,
     glutenFree: glutenFree,
     summary: summary,
+    extendedIngredients: extendedIngredients,
     instructions: instructions,
-    cuisines: cuisines,
+    cuisine: cuisine,
     servings: servings,
     analyzedInstructions: analyzedInstructions,
   };
 }
 
 function parseRecipeDetails(recipeInfo) {
-  const preview = recipeInfo.summary.split(".")[0];
+  const preview = recipeInfo.summary.split(".")[0] + ".";
   return {
     id: recipeInfo.id,
     title: recipeInfo.title,
     readyInMinutes: recipeInfo.readyInMinutes,
     image: recipeInfo.image,
-    popularity: recipeInfo.aggregateLikes,
+    aggregateLikes: recipeInfo.aggregateLikes,
     vegan: recipeInfo.vegan,
     summary: preview,
     vegetarian: recipeInfo.vegetarian,

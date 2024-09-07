@@ -1,32 +1,31 @@
 var express = require("express");
 var router = express.Router();
-const MySql = require("../routes/utils/MySql");
 const DButils = require("../routes/utils/DButils");
 const bcrypt = require("bcrypt");
+const authUtils = require("./utils/authUtils");
 
 router.post("/Register", async (req, res, next) => {
   try {
-    let user_details = {
+    let userDetails = {
       username: req.body.username,
-      firstname: req.body.firstname,
-      lastname: req.body.lastname,
+      firstname: req.body.firstName,
+      lastname: req.body.lastName,
       country: req.body.country,
       password: req.body.password,
       email: req.body.email,
     };
-    query = `SELECT 1 FROM users WHERE user_name = '${user_details.username}'`;
-    found = await DButils.execQuery(query);
-
-    if (found && found.length > 0)
-      throw { status: 409, message: "Username taken" };
+    result = await authUtils.validateUsername(userDetails.username);
+    if (result) {
+      throw { status: 409, message: "Username already exists" };
+    }
 
     let hash_password = bcrypt.hashSync(
-      user_details.password,
+      userDetails.password,
       parseInt(process.env.bcrypt_saltRounds)
     );
     await DButils.execQuery(
-      `INSERT INTO users (user_name, first_name, last_name, country, email, user_password) VALUES ('${user_details.username}', '${user_details.firstname}', '${user_details.lastname}',
-      '${user_details.country}', '${user_details.email}', '${hash_password}')`
+      `INSERT INTO users (user_name, first_name, last_name, country, email, user_password) VALUES ('${userDetails.username}', '${userDetails.firstName}', '${userDetails.lastName}',
+      '${userDetails.country}', '${userDetails.email}', '${hash_password}')`
     );
     res.status(200).send({ message: "user created", success: true });
   } catch (error) {

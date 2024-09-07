@@ -4,7 +4,6 @@ var express = require("express");
 var path = require("path");
 var logger = require("morgan");
 const session = require("client-sessions");
-const DButils = require("./routes/utils/DButils");
 var cors = require("cors");
 
 var app = express();
@@ -24,7 +23,8 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: false })); // parse application/x-www-form-urlencoded
-app.use(express.static(path.join(__dirname, "public"))); //To serve static files such as images, CSS files, and JavaScript files
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 //local:
 app.use(express.static(path.join(__dirname, "dist")));
 //remote:
@@ -65,7 +65,9 @@ app.use("/auth", auth);
 app.use(function (err, req, res, next) {
   console.log(err);
   let status = 500;
-  if (err && err.response && err.response.status) {
+  if (err && err.status) {
+    status = err.status;
+  } else if (err && err.response && err.response.status) {
     status = err.response.status;
   }
   res.status(status).send({ message: err.message, success: false });
