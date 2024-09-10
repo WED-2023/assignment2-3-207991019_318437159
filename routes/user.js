@@ -217,4 +217,14 @@ router.delete("/meal", async (req, res, next) => {
   }
 });
 
+router.get("/meal/amount", async (req, res, next) => {
+  try {
+    const username = req.session.username;
+    const amount = await userUtils.getMealSize(username);
+    res.status(200).send({ amount });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

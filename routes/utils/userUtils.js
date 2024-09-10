@@ -239,6 +239,13 @@ async function deleteMeal(username) {
   );
 }
 
+async function getMealSize(username) {
+  const result = await DButils.execQuery(
+    `SELECT COUNT(*) FROM user_meal WHERE user_name='${username}'`
+  );
+  return result[0]["COUNT(*)"];
+}
+
 exports.markAsFavorite = markAsFavorite;
 exports.getFavoriteRecipes = getFavoriteRecipes;
 exports.markAsViewed = markAsViewed;
@@ -255,3 +262,4 @@ exports.getMeal = getMeal;
 exports.getRecipeMealData = getRecipeMealData;
 exports.deleteRecipeFromMeal = deleteRecipeFromMeal;
 exports.deleteMeal = deleteMeal;
+exports.getMealSize = getMealSize;
