@@ -1,5 +1,6 @@
 const { json } = require("express");
 const DButils = require("./DButils");
+const { password } = require("pg/lib/defaults");
 const SERVER_URL = process.env.SERVER_URL;
 
 async function markAsFavorite(username, recipe_id) {
@@ -87,13 +88,13 @@ async function saveRecipe(username, recipe) {
     const resultLastId = await DButils.execQuery(
       `SELECT id FROM recipe ORDER BY CAST(id AS UNSIGNED) DESC LIMIT 1`
     );
-    
+
     let nextId;
     if (resultLastId.length > 0) {
       const lastId = resultLastId[0].id;
-      nextId = '0' + (parseInt(lastId) + 1).toString();
+      nextId = "0" + (parseInt(lastId) + 1).toString();
     } else {
-      nextId = '01';
+      nextId = "01";
     }
 
     // Insert the new recipe with the generated ID
@@ -167,6 +168,77 @@ async function getRecipeFullDetails(recipeId) {
   return parseRecipeFullDetails(recipe[0]);
 }
 
+async function getRecipeProgress(username, recipeId) {
+  const result = await DButils.execQuery(
+    `SELECT progress FROM user_meal WHERE user_name='${username}' AND recipe_id='${recipeId}'`
+  );
+  if (!result || result.length === 0) {
+    await DButils.execQuery(
+      `INSERT INTO user_meal (user_name, recipe_id, progress) VALUES ('${username}', '${recipeId}', 1)`
+    );
+    return 1;
+  }
+  return result[0].progress;
+}
+
+function parseRecipeInstructions(recipe, progress) {
+  const instructions = recipe.instructions;
+  const allSteps = [];
+  instructions.forEach((step, index) => {
+    allSteps.push({
+      stepDescription: step,
+      stepNumber: index + 1,
+    });
+  });
+  return {
+    steps: allSteps,
+    progress: progress,
+  };
+}
+
+async function getRecipeInstructions(recipeId, progress) {
+  const recipe = await DButils.execQuery(
+    `SELECT * FROM recipe WHERE id=${recipeId}`
+  );
+  return parseRecipeInstructions(recipe[0], progress);
+}
+
+async function updateRecipeProgress(username, recipeId, progress) {
+  await DButils.execQuery(
+    `INSERT INTO user_meal (user_name, recipe_id, progress) VALUES ('${username}', '${recipeId}', ${progress}) ON DUPLICATE KEY UPDATE progress = VALUES(progress);`
+  );
+}
+
+async function getMeal(username) {
+  const result = await DButils.execQuery(
+    `SELECT * FROM user_meal WHERE user_name='${username}'`
+  );
+  return result;
+}
+
+async function getRecipeMealData(recipeId, progress) {
+  let recipe = await getRecipeFullDetails(recipeId);
+  let analyzedInstructions = await getRecipeInstructions(recipeId, progress);
+  recipe.progress = progress;
+  recipe.numberOfInstructions = analyzedInstructions.steps.length;
+  return {
+    recipe: recipe,
+    analyzedInstructions: analyzedInstructions,
+  };
+}
+
+async function deleteRecipeFromMeal(username, recipeId) {
+  await DButils.execQuery(
+    `DELETE FROM user_meal WHERE user_name='${username}' AND recipe_id='${recipeId}'`
+  );
+}
+
+async function deleteMeal(username) {
+  await DButils.execQuery(
+    `DELETE FROM user_meal WHERE user_name='${username}'`
+  );
+}
+
 exports.markAsFavorite = markAsFavorite;
 exports.getFavoriteRecipes = getFavoriteRecipes;
 exports.markAsViewed = markAsViewed;
@@ -176,3 +248,10 @@ exports.getPrivateRecipes = getPrivateRecipes;
 exports.getRecipeFullDetails = getRecipeFullDetails;
 exports.getViewedStatus = getViewedStatus;
 exports.getFavoriteStatus = getFavoriteStatus;
+exports.getRecipeProgress = getRecipeProgress;
+exports.getRecipeInstructions = getRecipeInstructions;
+exports.updateRecipeProgress = updateRecipeProgress;
+exports.getMeal = getMeal;
+exports.getRecipeMealData = getRecipeMealData;
+exports.deleteRecipeFromMeal = deleteRecipeFromMeal;
+exports.deleteMeal = deleteMeal;

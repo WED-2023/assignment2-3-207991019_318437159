@@ -14,9 +14,18 @@ async function callRandomRecipes(amount) {
 }
 
 async function getRecipeInformation(recipeId) {
+  console.log(recipeId);
   return await axios.get(`${api_domain}/${recipeId}/information`, {
     params: {
       includeNutrition: false,
+      apiKey: process.env.SPOONACULAR_API_KEY,
+    },
+  });
+}
+
+async function getRecipeAnalyzedInstructions(recipeId) {
+  return await axios.get(`${api_domain}/${recipeId}/analyzedInstructions`, {
+    params: {
       apiKey: process.env.SPOONACULAR_API_KEY,
     },
   });
@@ -45,7 +54,6 @@ async function callSearchRecipes(
 }
 
 async function getViewedStatus(username, recipeIds) {
-  debugger;
   const viewedRecipes = await userUtils.getViewedStatus(username, recipeIds);
   return recipeIds.map((id) => viewedRecipes.includes(id));
 }
@@ -58,9 +66,32 @@ async function getFavoriteStatus(username, recipeIds) {
   return recipeIds.map((id) => favoriteRecipies.includes(id));
 }
 
+async function fetchRecipeInstructions(recipeId, progress) {
+  const instructions = await getRecipeAnalyzedInstructions(recipeId);
+  const allSteps = [];
+  let stepNumber = 1;
+  instructions.data.forEach((part) => {
+    part.steps.forEach((stepObj) => {
+      allSteps.push({
+        recipeName: part.name,
+        equipment: stepObj.equipment,
+        stepNumber: stepNumber++,
+        stepDescription: stepObj.step,
+        ingredients: stepObj.ingredients,
+      });
+    });
+  });
+  result = {
+    steps: allSteps,
+    progress: progress,
+  };
+  return result;
+}
+
 async function getRecipeFullDetails(recipeId) {
   let instructions = [];
   let recipeInfo = await getRecipeInformation(recipeId);
+  console.log(recipeInfo);
   let {
     id,
     title,
@@ -208,8 +239,51 @@ async function searchRecipes(
   return result;
 }
 
+async function getRecipeInstructions(recipeId, username) {
+  let recipe;
+  let progress = 1;
+  if (username) {
+    progress = await userUtils.getRecipeProgress(username, recipeId);
+  }
+  if (recipeId[0] !== "0") {
+    recipe = await fetchRecipeInstructions(recipeId, progress);
+  } else {
+    recipe = await userUtils.getRecipeInstructions(recipeId, progress);
+  }
+  return recipe;
+}
+
+async function getRecipeMealData(recipeId, progress) {
+  let recipe = await getRecipeDetails(recipeId);
+  let analyzedInstructions = await fetchRecipeInstructions(recipeId, progress);
+  recipe.progress = progress;
+  recipe.numberOfInstructions = analyzedInstructions.steps.length;
+  return {
+    recipe: recipe,
+    analyzedInstructions: analyzedInstructions,
+  };
+}
+
+async function getMeal(userName) {
+  let promises = [];
+  const recipes = await userUtils.getMeal(userName);
+  recipes.forEach((recipe) => {
+    const recipeId = recipe.recipe_id;
+    const progress = recipe.progress;
+    if (recipeId[0] != "0") {
+      promises.push(getRecipeMealData(recipeId, progress));
+    } else {
+      promises.push(userUtils.getRecipeMealData(recipeId, progress));
+    }
+  });
+  let recipes_info = await Promise.all(promises);
+  return recipes_info;
+}
+
 exports.getRecipeDetails = getRecipeDetails;
 exports.getRecipeFullDetails = getRecipeFullDetails;
 exports.searchRecipes = searchRecipes;
 exports.getRecipesPreview = getRecipesPreview;
 exports.getRandomRecipes = getRandomRecipes;
+exports.getRecipeInstructions = getRecipeInstructions;
+exports.getMeal = getMeal;

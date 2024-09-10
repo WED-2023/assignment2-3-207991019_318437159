@@ -52,7 +52,6 @@ router.get("/:recipeId", async (req, res, next) => {
       res.status(200).send(recipe);
     } else {
       const recipe = await userUtils.getRecipeFullDetails(req.params.recipeId);
-      console.log(recipe);
       res.status(200).send(recipe);
     }
   } catch (error) {
@@ -66,6 +65,20 @@ router.get("/random/:amount", async (req, res, next) => {
     const username = getUserName(req);
     const result = await recipesUtils.getRandomRecipes(amount, username);
     res.status(200).send(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/instructions/:recipeId", async (req, res, next) => {
+  try {
+    const recipeId = req.params.recipeId;
+    const username = getUserName(req);
+    const instructions = await recipesUtils.getRecipeInstructions(
+      recipeId,
+      username
+    );
+    res.status(200).send(instructions);
   } catch (error) {
     next(error);
   }

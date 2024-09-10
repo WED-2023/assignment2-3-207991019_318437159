@@ -129,7 +129,6 @@ router.post("/saveRecipe", upload.single("photo"), async (req, res, next) => {
       servings,
       time,
     } = req.body;
-    console.log(req.body);
     const vegan = diets.includes("vegan");
     const vegetarian = diets.includes("vegetarian");
     const glutenFree = diets.includes("gluten_free");
@@ -167,6 +166,52 @@ router.get("/private", async (req, res, next) => {
     const username = req.session.username;
     const results = await userUtils.getPrivateRecipes(username);
     res.status(200).send(results);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/updateProgress", async (req, res, next) => {
+  try {
+    const username = req.session.username;
+    const { progress, recipeId } = req.body;
+    const results = await userUtils.updateRecipeProgress(
+      username,
+      recipeId,
+      progress
+    );
+    res.status(200).send(results);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/meal", async (req, res, next) => {
+  try {
+    const username = req.session.username;
+    const results = await recipeUtils.getMeal(username);
+    res.status(200).send(results);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/meal/:recipeId", async (req, res, next) => {
+  try {
+    const username = req.session.username;
+    const recipeId = req.params.recipeId;
+    await userUtils.deleteRecipeFromMeal(username, recipeId);
+    res.status(200);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/meal", async (req, res, next) => {
+  try {
+    const username = req.session.username;
+    await userUtils.deleteMeal(username);
+    res.status(200);
   } catch (error) {
     next(error);
   }
