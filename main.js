@@ -26,14 +26,14 @@ app.use(express.urlencoded({ extended: false })); // parse application/x-www-for
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 //local:
-app.use(express.static(path.join(__dirname, "dist")));
+//app.use(express.static(path.join(__dirname, "dist")));
 //remote:
-// app.use(express.static(path.join(__dirname, '../assignment-3-3-basic/dist')));
+app.use(express.static(path.join(__dirname, '../assignment2-1-207991019_318437159/dist')));
 app.get("/", function (req, res) {
   //remote:
-  // res.sendFile(path.join(__dirname, '../assignment-3-3-basic/dist/index.html'));
+  res.sendFile(path.join(__dirname, '../assignment2-1-207991019_318437159/dist/index.html'));
   //local:
-  res.sendFile(__dirname + "/index.html");
+  // res.sendFile(__dirname + "/index.html");
 });
 
 // app.use(cors());
@@ -73,13 +73,15 @@ app.use(function (err, req, res, next) {
   res.status(status).send({ message: err.message, success: false });
 });
 
-const server = app.listen(port, () => {
-  console.log(`Server listen on port ${port}`);
-});
+// const server = app.listen(port, () => {
+//   console.log(`Server listen on port ${port}`);
+// });
 
-process.on("SIGINT", function () {
-  if (server) {
-    server.close(() => console.log("server closed"));
-  }
-  process.exit();
-});
+// process.on("SIGINT", function () {
+//   if (server) {
+//     server.close(() => console.log("server closed"));
+//   }
+//   process.exit();
+// });
+
+module.exports = app;

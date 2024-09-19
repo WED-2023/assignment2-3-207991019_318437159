@@ -204,9 +204,18 @@ async function getRecipeInstructions(recipeId, progress) {
 }
 
 async function updateRecipeProgress(username, recipeId, progress) {
-  await DButils.execQuery(
-    `INSERT INTO user_meal (user_name, recipe_id, progress) VALUES ('${username}', '${recipeId}', ${progress}) ON DUPLICATE KEY UPDATE progress = VALUES(progress);`
-  );
+  const deleteQuery = `
+    DELETE FROM user_meal 
+    WHERE user_name = '${username}' AND recipe_id = '${recipeId}';
+  `;
+  
+  const insertQuery = `
+    INSERT INTO user_meal (user_name, recipe_id, progress) 
+    VALUES ('${username}', '${recipeId}', ${progress});
+  `;
+  
+  await DButils.execQuery(deleteQuery);
+  await DButils.execQuery(insertQuery);
 }
 
 async function getMeal(username) {
